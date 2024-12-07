@@ -60,6 +60,11 @@ module Rails
       end
 
       def scrub(node)
+        if node.cdata?
+          text = node.document.create_text_node node.text
+          node.replace text
+          return CONTINUE
+        end
         return CONTINUE if skip_node?(node)
 
         unless keep_node?(node)
@@ -76,7 +81,7 @@ module Rails
       end
 
       def skip_node?(node)
-        node.text? || node.cdata?
+        node.text?
       end
 
       def scrub_attribute?(name)
@@ -142,6 +147,26 @@ module Rails
 
       def scrub_attribute?(name)
         @attributes.include?(name)
+      end
+    end
+
+    # === Rails::Html::TextOnlyScrubber
+    #
+    # Rails::Html::TextOnlyScrubber allows you to permit text nodes.
+    #
+    # Unallowed elements will be stripped, i.e. element is removed but its subtree kept.
+    class TextOnlyScrubber < Loofah::Scrubber
+      def initialize
+        @direction = :bottom_up
+      end
+
+      def scrub(node)
+        if node.text?
+          CONTINUE
+        else
+          node.before node.children
+          node.remove
+        end
       end
     end
   end
